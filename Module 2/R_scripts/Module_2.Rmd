@@ -1,0 +1,317 @@
+---
+title: "Module 2 - Integrability_testing"
+output: .txt, .rds and .pdf documents
+---
+## Installation needed
+```{r}
+
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+pacman::p_load(
+  BiocManager, Seurat, dittoSeq, ggplot2, gtools, dplyr, R.utils, dbscan,
+  gridExtra, gitcreds
+)
+
+#To install kBET you need a GitHub token. Generate a classic token via this link https://github.com/settings/tokens/new and insert you personal token in the following code:
+#I also found this: 
+#usethis::create_github_token()
+
+if (!requireNamespace("kBET", quietly = TRUE)) {
+  Sys.setenv(GITHUB_PAT = "your_token")
+  devtools::install_github("theislab/kBET")
+}
+#donwnload and install Rtools from here https://cloud.r-project.org/bin/windows/Rtools/
+```
+
+## Load required packages
+```{r}
+library(Seurat)
+library(dittoSeq)
+library(ggplot2)
+library(gtools)
+library(dplyr)
+library(R.utils)
+library(dbscan)
+library(kBET)
+
+
+#define Seurat parameters
+seurat_default_options <- list(
+  Seurat.memsafe = TRUE,
+  Seurat.warn.umap.uwot = TRUE,
+  Seurat.checkdots = "warn",
+  Seurat.limma.wilcox.msg = TRUE,
+  Seurat.Rfast2.msg = TRUE,
+  Seurat.warn.vlnplot.split = TRUE
+)
+#Source the external script 'Seurat_Utils' for further analysis (10-fold Singular Value Decomposition (SVD) cross validation to predict number of PCs)
+source("Seurat_Utils.R") 
+```
+
+## Upload Base atlas and dataset to evaluate
+```{r}
+#Set the working directory and open the reference Dataset
+ref_atlas <- readRDS("L:/GBW-0086_LYLIM/Manuscripts/2025_Atlas_development/Datasets/Seurat_objects/Atlas old/Atlas_v0.rds")
+#Set the working directory and open the dataset of interest
+Dataset <- readRDS("L:/GBW-0086_LYLIM/Manuscripts/2025_Atlas_development/Datasets/scRNAseq_datasets/P1/Lim_lab_P1_Live/Deep sequencing/P1_DS24_Clean.rds")
+#Give a name to the dataset of interest
+test_dataset_name <- "DS24"
+```
+
+## Compute integration anchors
+```{r}
+ref_atlas$sample <- paste0("BaseAtlas_",ref_atlas$orig.ident)
+#Add a column to the metadata and specify the name of your sample (If not done in Module 1)
+Dataset$sample <- "DS24"
+
+DefaultAssay(ref_atlas) <- "RNA"
+DefaultAssay(Dataset) <- "RNA"
+
+#If your reference Dataset is composed of multiple samples, split them to compare your Dataset of interest with each of the samples in the reference Dataset
+ref_atlas_split <- SplitObject(ref_atlas, split.by = "sample")
+test_dataset_filtered_sst_split <- SplitObject(Dataset, split.by = "sample")
+
+integrated_all_list <- c(ref_atlas_split, test_dataset_filtered_sst_split)
+
+for(sample in names(integrated_all_list)){
+  obj <- integrated_all_list[[sample]]
+  obj <- NormalizeData(obj)
+  obj <- FindVariableFeatures(obj, nfeatures = 3000)
+  integrated_all_list[[sample]] <- obj
+}
+length(integrated_all_list)
+
+## Check the retained anchors between the Dataset of interest and the reference atlas
+i.anchors <- FindIntegrationAnchors(object.list = integrated_all_list, dims = 1:30, reduction = 'cca', scale = T, k.anchor = 5, k.filter = 100, k.score = 15, anchor.features = 3000, reference = c(5))
+number_of_anchors <- table(i.anchors@anchors$dataset1)
+names(number_of_anchors) <- names(ref_atlas_split)[1:length(number_of_anchors)]
+
+## Print retained anchors
+number_of_anchors
+write.table(number_of_anchors, paste0("Number_of_anchors_withBaseAtlas_", test_dataset_name,".txt"), sep = "\t", quote = FALSE, col.names = FALSE, row.names = FALSE)
+
+rm(list = c("test_dataset_filtered_sst_split", "obj", "ref_atlas", 
+            "ref_atlas_split", "number_of_anchors", "i.anchors"))
+gc()
+```
+
+## Perform CCA integration and compute PCA (the best number of PC is  estimated)
+```{r}
+if (!file.exists(paste0(path_data, "/integrated_data_", test_dataset_name, ".RDS"))) { # Ensures that the file for the integrated data exists
+  i.anchors <- FindIntegrationAnchors(object.list = integrated_all_list, dims = 1:30, reduction = 'cca', scale = T, k.anchor = 5, k.filter = 100, k.score = 15, anchor.features = 3000)
+  integrated_data <- IntegrateData(anchorset = i.anchors, dims = 1:30, normalization.method = 'LogNormalize', k.weight = 100)
+  DefaultAssay(integrated_data) <- 'integrated'
+  integrated_data <- ScaleData(integrated_data, verbose = FALSE)
+  integrated_data <- RunPCA(integrated_data, npcs = 100)
+  path_data <- getwd()
+  # Save integrated data to file # Ensure to update file names to accurately represent a new dataset
+  saveRDS(integrated_data, file = paste0(path_data, "/integrated_data_", test_dataset_name, ".RDS"))
+} else {
+  # Load precomputed integrated data
+  integrated_data <- readRDS(paste0(path_data, "/integrated_data_", test_dataset_name, ".RDS"))
+}
+
+#saveRDS(integrated_data, file = paste0("Integrated_data_BaseAtlas_",test_dataset_name, ".RDS"))
+
+if (!file.exists(paste0(path_data, "/optimal_nPCs_integrated_", test_dataset_name, ".RDS"))) { # Ensures that the nPCs file already exists
+
+  data.use.integrated <- PrepDR(object = integrated_data, genes.use = VariableFeatures(object = integrated_data), use.imputed = F, assay.type = "integrated")
+
+  nPCs.data.use5 <- PCA_estimate_nPC(data.use.integrated, whereto = paste0(path_data, "/optimal_nPCs_5_integrated_", test_dataset_name, ".RDS"), by.nPC = 5, from.nPC = 30, to.nPC = 70) 
+  nPCs.data.use <- PCA_estimate_nPC(data.use.integrated, whereto = paste0(path_data, "/optimal_nPCs_integrated_", test_dataset_name, ".RDS"), by.nPC = 1, from.nPC = nPCs.data.use5 - 5, to.nPC = nPCs.data.use5 + 5)
+saveRDS(nPCs.data.use, file = paste0(path_data, "/optimal_nPCs_integrated_", test_dataset_name, ".RDS"))
+} else {
+  nPCs.data.use <- readRDS(paste0(path_data, "/optimal_nPCs_integrated_", test_dataset_name, ".RDS"))
+}
+
+pca_integrated <- Embeddings(integrated_data, reduction = "pca")[,1:nPCs.data.use]
+#saveRDS(pca_integrated, file = paste0("PCA_integrated_BaseAtlas_",test_dataset_name, ".RDS"))
+
+cells_new_dataset <- rownames(integrated_data@meta.data[which(integrated_data@meta.data$sample %in% "DS21"),])
+cells_ref <- rownames(integrated_data@meta.data[which(integrated_data@meta.data$sample %in% c("BaseAtlas_E16", "BaseAtlas_P1", "BaseAtlas_P5", "BaseAtlas_lim_P5_fixed_sorted")),]) #These are the names of the samples present in the Reference Dataset
+
+
+rm(list = c("nPCs.data.use", "nPCs.data.use5", "path_data", "data.use.integrated", "integrated_all_list", "PCA_estimate_nPC", "i.anchors", "PrepDR"))
+gc()
+```
+
+## Compute euclidean distances between Dataset cells and closest ref_Dataset  cell within integrated PCA space
+```{r}
+distances <- as.matrix(stats::dist(pca_integrated))
+distances <- distances[cells_new_dataset,cells_ref]
+min_distances_integrated <- unlist(apply(distances, 1, function(x) min(x)))
+names(min_distances_integrated) <- rownames(distances)
+Dataset$min_distances_integrated <- min_distances_integrated[colnames(Dataset)]
+#pdf(paste0('Min_dist_from_cells_of_BaseAtlas_',test_dataset_name,'.pdf'),width=5)
+VlnPlot(Dataset, features = c("min_distances_integrated"), ncol = 1, pt.size = 0, group.by = "orig.ident") + ylab('Euclidean Distance') + ggtitle("Min distance from cells of the base atlas") + theme(legend.position = "none")
+dev.off()
+
+rm(distances)
+rm(min_distances_integrated)
+gc()
+```
+
+## Compute percentage of cells in Dataset whose nearest neighbors comprise at least half of global fraction of ref atlas cells (for increasing k). Computed on integrated PCs.
+```{r}
+percentage_nn <- c()
+fraction_ref_on_integrated <- length(cells_ref)/(length(cells_ref)+length(cells_new_dataset))
+for(k_score in seq(5,200,5)){
+  knn_integrated <- dbscan::kNN(x = pca_integrated %>% as.matrix(), k = k_score, query = pca_integrated[cells_new_dataset,])
+  knn_integrated.data <- data.frame(from = rep(rownames(knn_integrated$id), k_score),
+                                    to = rownames(pca_integrated)[as.vector(knn_integrated$id)])
+  knn_integrated.data <- knn_integrated.data[which(knn_integrated.data$to %in% cells_ref),]
+  percentage_nn<-c(percentage_nn, sum(table(knn_integrated.data$from) > k_score*fraction_ref_on_integrated/2)/length(cells_new_dataset))
+}
+names(percentage_nn) <- seq(5,200,5)
+saveRDS(percentage_nn,file = paste0("Percentages_of_cells_in_", test_dataset_name, "_having_at_least_halfExpectedCells_from_BaseAtlas_in_kNN.RDS"))
+write.table(percentage_nn["50"], paste0("Percentage_of_cells_in_", test_dataset_name, "_having_at_least_halfExpectedCells_from_BaseAtlas_in_50NN.txt"),sep = "\t", quote = FALSE, col.names = FALSE, row.names=FALSE)
+#pdf(paste0("Percentages_of_cells_in_",test_dataset_name,"_having_at_least_halfExpectedCells_from_BaseAtlas_in_kNN.pdf"))
+plot(seq(5,200,5), percentage_nn, pch = 19, xlab = "k", ylab = "percentage of dataset", ylim = c(0,1))
+abline(v = 50, col = "red2")
+dev.off()
+
+rm(percentage_nn)
+rm(knn_integrated)
+rm(k_score)
+rm(knn_integrated.data)
+rm(fraction_ref_on_integrated)
+gc()
+```
+
+## Perform kBET test
+```{r}
+batch <- integrated_data$sample
+batch[which(batch %in% c("BaseAtlas_E16", "BaseAtlas_P1", "BaseAtlas_P5", "BaseAtlas_lim_P5_fixed_sorted"))] <- "ref"
+batch[which(! batch %in% c("ref"))] <- "new"
+
+#pdf(paste0('kBET_plot_',test_dataset_name,'.pdf'))
+batch.estimate <- kBET(pca_integrated, batch[rownames(pca_integrated)], do.pca = FALSE, plot = TRUE , testSize = round(dim(pca_integrated)[1]*0.1), k0 = 20, n_repeat = 20)
+dev.off()
+saveRDS(batch.estimate, file = paste0("kBET_batch_estimate_", test_dataset_name, ".RDS"))
+# you can get stats for plotting from batch.estimate$stats
+
+rm(batch)
+gc()
+```
+
+## Perform kBET on a subset of 1000 randomly selected from each sample
+```{r}
+set.seed(1234)
+subset_ref_E16 <- sample(rownames(subset(integrated_data@meta.data, subset = sample == "BaseAtlas_E16")), size = 1000, replace=FALSE)
+subset_ref_P1 <- sample(rownames(subset(integrated_data@meta.data, subset = sample == "BaseAtlas_P1")), size = 1000, replace=FALSE)
+subset_ref_P5 <- sample(rownames(subset(integrated_data@meta.data, subset = sample == "BaseAtlas_P5")), size = 1000, replace=FALSE)
+subset_ref_P5_fs <- sample(rownames(subset(integrated_data@meta.data, subset = sample == "BaseAtlas_lim_P5_fixed_sorted")), size = 1000, replace=FALSE)
+cells_ref_subset <- c(subset_ref_E16,subset_ref_P1,subset_ref_P5, subset_ref_P5_fs)
+subset_Sample_name <- sample(cells_new_dataset, size = 1000, replace=FALSE)
+
+pca_integrated_subset <- pca_integrated[c(cells_ref_subset,subset_Sample_name),]
+pdf(paste0('kBET_plot_subset_bothDatasets_', test_dataset_name,'.pdf'))
+batch.estimate_subset <- kBET(pca_integrated_subset, batch[rownames(pca_integrated_subset)], do.pca = FALSE, plot = TRUE , testSize = round(dim(pca_integrated_subset)[1] * 0.1), k0 = 20, n_repeat = 20)
+dev.off()
+saveRDS(batch.estimate_subset, file=paste0("kBET_batch_estimate_subset_bothDatasets_", test_dataset_name,".RDS"))
+write.table(mean(batch.estimate_subset$stats$kBET.observed), paste0("MeanRejectionRate_kBET_batch_estimate_subset_bothDatasets_", test_dataset_name,".txt"), sep = "\t", quote = FALSE, col.names = FALSE, row.names = FALSE)
+
+
+rm(list = c("batch.estimate", "subset_ref_E16", "subset_ref_P1", "subset_ref_P5", "subset_ref_P5_fs", "cells_ref_subset", 
+  "subset_Sample_name", "test_dataset_name", "batch.estimate_subset", "pca_integrated", "pca_integrated_subset"))
+gc()
+```
+
+## Combine analysis of different datasets. Put in the same folder, the following files for each dataset:
+  - kBET_batch_estimate_XXX
+  - kBET_batch_estimate_subset_bothDatasets_XXX
+  - Number_of_anchors_withBaseAtlas_XXX
+  - Percentages_of_cells_in_XXX_having_at_least_halfExpectedCells_from_BaseAtlas_in_kNN
+  (put all the files from kBET, kNN_perc_of_cells_with_WellMixedNeighbourhood and Number_of_anchors folders from different Datasets into the same folder)
+  
+```{r}
+#Generate and save a summary table of the previously analysed datasets. Sample names need to match the sample name added to the metadata before.
+Sample <- c("P5_WT1_Lim1", "P1_new_DS24") #Add as many sample as you analyzed and you want to combine
+dataset_id <- c('DS19','DS24')
+n_cells <- c(5316, 9758)
+data_table <- data.frame(Sample,dataset_id, n_cells)
+write.table(data_table, "data.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+#Open the table
+data<-read.table("data.txt", row.names = 1, header = TRUE)
+files <-dir()
+
+files_anchors <- files[grep("Number_of_anchors_",files)]
+files_kBET <- files[grep("kBET_batch_estimate_subset_bothDatasets_",files)]
+files_kBET <- files_kBET[grep(".RDS",files_kBET)]
+
+#Prepare data for combined analysis
+rejection_rate<-c()
+mean_anchors <- c()
+mean_anchors_scaled <- c()
+for (i in rownames(data)){
+  n_anchors <- read.table(paste0(files_anchors[grep(i,files_anchors)]), row.names = 1)
+  mean_anchors <- c(mean_anchors,mean(n_anchors[,1]))
+  mean_anchors_scaled <- c(mean_anchors_scaled,mean(n_anchors[,1])/data[i,2])
+  kbet<-readRDS(paste0(files_kBET[grep(i,files_kBET)]))
+  rejection_rate<-c(rejection_rate,median(kbet$stats$kBET.observed))
+}
+
+data_plot1<-data.frame(data,mean_anchors = mean_anchors, mean_anchors_scaled = mean_anchors_scaled, kBET_rejection_rate=rejection_rate)
+
+
+#Plot Anchor points VS kBet rejection rate
+colors_ditto<-dittoColors()
+pdf('Mean_anchors_vs_kBET_RejectionRate.pdf')
+plot(data_plot1$kBET_rejection_rate, data_plot1$mean_anchors, col=colors_ditto, pch=c(0:12),cex=1.5,lwd=2, xlab ="kBET rejection rate", ylab="Mean anchors")
+legend("topright",legend=paste0(data[,1]," - ",rownames(data)),fill=colors_ditto,horiz = FALSE,cex=0.6,pch = c(0:12))
+abline(v=0.5,col="red3",lty=2)
+abline(h=2000,col="red3",lty=2)
+dev.off()
+
+#If you want to plot the scaled values
+pdf('Mean_anchors_scaled_vs_kBET_RejectionRate.pdf')
+plot(data_plot1$kBET_rejection_rate, data_plot1$mean_anchors_scaled, col=colors_ditto, pch=c(0:12), cex=1.5, lwd=2, xlab ="kBET rejection rate", ylab="Mean anchors (scaled)")
+legend("topright",legend=paste0(data[,1]," - ",rownames(data)),fill=colors_ditto,horiz = FALSE,cex=0.6,pch = c(0:12))
+abline(v=0.5,col="red3",lty=2)
+abline(h=2000,col="red3",lty=2)
+dev.off()
+
+#Plot fraction of cells within k-NN
+files_knn <- files[grep("Percentages_of_cells_in_",files)]
+files_knn<-files_knn[grep(".RDS",files_knn)]
+pdf('plot_percentages_of_cells_with_mixed_neighborhood_in_kNN_allSamples.pdf', width=8)
+par(cex=0.5,cex.lab=1.2)
+i=1
+knn_perc<-readRDS(paste0(files_knn[grep(rownames(data)[i],files_knn)]))
+plot(seq(5,200,5),knn_perc, xlab="k",ylab="fraction of cells with mixed neighborhood", pch=0,cex=0.8,col=colors_ditto[i], ylim=c(0,1.05),xaxt='n',yaxt='n')
+legend("top",legend=paste0(data[,1]," - ",rownames(data[,])),fill=colors_ditto,horiz = FALSE,cex=0.915,pch = c(0:12),ncol=6)
+axis(2,cex.axis=1.5,)
+axis(1,cex.axis=1.5)
+print(lines(seq(5,200,5),knn_perc,col=colors_ditto[i]))
+for (i in 2:nrow(data)){
+  knn_perc<-readRDS(paste0(files_knn[grep(rownames(data)[i],files_knn)]))
+  print(points(seq(5,200,5),knn_perc, pch=i-1,col=colors_ditto[i]))
+  print(lines(seq(5,200,5),knn_perc,col=colors_ditto[i]))
+}
+abline(v=60,col="blue4",lty=2)
+abline(h=0.45,col="red3",lty=2)
+dev.off()
+
+knn_perc_k60<-c()
+for (i in 1:nrow(data)){
+  knn_perc<-readRDS(paste0(files_knn[grep(rownames(data)[i],files_knn)]))
+  knn_perc_k60<-c(knn_perc_k60,knn_perc["60"])
+}
+data_plot1<-data.frame(data, mean_anchors = mean_anchors, kBET_rejection_rate=rejection_rate, knn_perc_k60=knn_perc_k60)
+
+#Plot Anchor points VS cells within kNN
+pdf('Mean_ancors_vs_k60_fraction_of_cells.pdf')
+plot(data_plot1$knn_perc_k60, data_plot1$mean_anchors, col=colors_ditto, pch=c(0:12),cex=1.5,lwd=2, xlab ="fraction of cells with mixed neighborhood", ylab="Mean anchors")
+legend("topleft",legend=paste0(data[,1]," - ",rownames(data[,])),fill=colors_ditto,horiz = FALSE,cex=0.6,pch = c(0:12))
+abline(v=0.45,col="red3",lty=2)
+abline(h=2000,col="red3",lty=2)
+dev.off()
+
+pdf('Mean_ancors_scaled_vs_k60_fraction_of_cells.pdf')
+plot(data_plot1$knn_perc_k60, data_plot1$mean_anchors_scaled,col=colors_ditto, pch=c(0:12),cex=1.5,lwd=2, xlab ="fraction of cells with mixed neighborhood", ylab="Mean anchors (scaled)")
+legend("topleft",legend=paste0(data[,1]," - ",rownames(data[,])),fill=colors_ditto,horiz = FALSE,cex=0.6,pch = c(0:12))
+abline(v=0.45,col="red3",lty=2)
+abline(h=2000,col="red3",lty=2)
+dev.off()
+```
+
