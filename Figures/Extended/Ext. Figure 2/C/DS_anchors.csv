@@ -1,0 +1,14 @@
+dataset_id,Anchors
+adult1,28735
+adult2,19691
+adult3,24924
+adult4,14221
+adultF1,26083
+adultF2,16990
+intact2,21842
+intact3,29595
+intact4,27303
+neonatal1,28037
+neonatal2,22303
+neonatal3,21401
+neonatal4,19489
