@@ -1,3 +1,0 @@
-Sample	dataset_id	n_cells
-P5_WT1_Lim1	DS19	5316
-P1_new_DS24	DS24	9758
