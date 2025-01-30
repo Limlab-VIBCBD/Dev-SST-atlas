@@ -1,0 +1,14 @@
+Sample	dataset.id	n_cells		
+adult1	A1	14727
+adult2	A2	10864	
+adult3	A3	10948
+adult4	A4	5599		
+adultF1	AF1	13394		
+adultF2	AF2	16273
+intact2	I2	12813
+intact3	I3	13064	
+intact4	I4	19600			
+neonatal1	N1	16855			
+neonatal2	N2	9908				
+neonatal3	N3	16757				
+neonatal4	N4	9752				
