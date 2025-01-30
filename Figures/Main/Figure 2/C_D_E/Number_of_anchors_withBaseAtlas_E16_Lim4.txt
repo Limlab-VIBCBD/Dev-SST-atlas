@@ -1,0 +1,4 @@
+BaseAtlas_E16	2646
+BaseAtlas_P1	1936
+BaseAtlas_P5	1445
+BaseAtlas_lim_P5_fixed_sorted	3094
