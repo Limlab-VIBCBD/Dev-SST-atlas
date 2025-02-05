@@ -8,7 +8,8 @@ install.packages("rmarkdown")
 install.packages("BiocManager")
 BiocManager::install("circlize")
 BiocManager::install("dittoSeq")
-
+BiocManager::install("ComplexHeatmap")
+BiocManager::install("MAST")
 
 install.packages("forcats")
 install.packages("readr")
@@ -19,8 +20,7 @@ install.packages("devtools")
 Sys.setenv(GITHUB_PAT = "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")
 devtools::install_github("crazyhottommy/scclusteval")
 
-BiocManager::install("ComplexHeatmap")
-BiocManager::install("MAST")
+
 ```
 
 ## Install libraries
