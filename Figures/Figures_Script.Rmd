@@ -1,6 +1,6 @@
 ---
 title: "Figures_script"
-Note: to run the entire chunks, the .csv/.rds files need to be located in the same directory of the Figure_Script.RDM
+Note: to run the entire chunk, the .csv/.rds files need to be located in the same directory of the Figure_Script.RDM
 ---
 ## Packages to install
 ```{r}
