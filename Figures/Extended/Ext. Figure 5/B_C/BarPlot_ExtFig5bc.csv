@@ -1,0 +1,13 @@
+"Major","Category","group","Percentage"
+"Martinotti","<0.9","E16",49.1743119266055
+"Martinotti","<0.9","P1",32.935960591133
+"Martinotti","<0.9","P5",25.7826086956522
+"Martinotti",">=0.9","E16",50.8256880733945
+"Martinotti",">=0.9","P1",67.064039408867
+"Martinotti",">=0.9","P5",74.2173913043478
+"Non-Martinotti","<0.9","E16",45.7813646368305
+"Non-Martinotti","<0.9","P1",33.3046471600688
+"Non-Martinotti","<0.9","P5",26.015538290788
+"Non-Martinotti",">=0.9","E16",54.2186353631695
+"Non-Martinotti",">=0.9","P1",66.6953528399312
+"Non-Martinotti",">=0.9","P5",73.984461709212
