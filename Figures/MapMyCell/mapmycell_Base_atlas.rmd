@@ -1,0 +1,174 @@
+---
+title: "*MapMyCells*" 
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Overview
+
+MapMyCells enables mapping of single cell and spatial trancriptomics data sets to a whole mouse brain taxonomy. The taxonomy is derived and presented in "A high-resolution transcriptomic and spatial atlas of cell types in the whole mouse brain" (<https://www.biorxiv.org/content/10.1101/2023.03.06.531121v1>), and we encourage you to cite this work if you use MapMyCells to transfer these labels to your data. This R workbook illustrates a common use case for the MapMyCells facility (<https://knowledge.brain-map.org/mapmycells/process/>) and follow up analyses. The query data included in this document are from the paper "The cell type composition of the adult mouse brain revealed by single cell and spatial genomics" (<https://doi.org/10.1101/2023.03.06.531307>) from the Chen and Macosko labs, which also has a nice data exploration tool (Brain Cell Data Viewer; <https://docs.braincelldata.org/>).
+
+### Prepare your workspace
+
+#### Load the relevant libraries
+
+This workbook uses the libraries *anndata* and *Seurat*.
+
+```{r load libraries, warnings=FALSE}
+library(dplyr)
+library(Seurat)
+library(patchwork)
+library(dittoSeq)
+library(SeuratData)
+seurat_default_options <- list(
+  Seurat.memsafe = TRUE,
+  Seurat.warn.umap.uwot = TRUE,
+  Seurat.checkdots = "warn",
+  Seurat.limma.wilcox.msg = TRUE,
+  Seurat.Rfast2.msg = TRUE,
+  Seurat.warn.vlnplot.split = TRUE
+)
+
+options(stringsAsFactors=FALSE)
+
+# Citing R libraries
+# citation("Seurat") # Note that the citation for any R library can be pulled up using the citation command. We encourage citation of R libraries as appropriate.
+```
+
+####  Output to h5ad format
+
+Now let's output the data matrix into an h5ad file and output it to the current directory for upload to MapMyCells. Note that in anndata data structure the genes are saved as columns rather than rows so we need to transpose the matrix first.
+
+```{r}
+base_atlas<-readRDS("BaseAtlas.rds")
+write.csv(base_atlas@assays$RNA@counts, "Base_atlas_raw_counts.csv")
+
+```
+
+# In python
+```{python}
+import scanpy as sc
+import pandas as pd
+import anndata
+ 
+base_atlas_counts = pd.read_csv("Base_atlas_raw_counts.csv", index_col=0)
+
+base_atlas_anndata = anndata.AnnData(X=base_atlas_counts.T)
+
+base_atlas_anndata.write("Base_atlas_raw_counts.h5ad",compression='gzip')
+```
+
+
+#### Assign cell types using MapMyCells
+
+These next steps are performed OUTSIDE of R in the MapMyCells web application.
+
+The steps to MapMyCells are as follows:
+
+1.  Go to (<https://knowledge.brain-map.org/mapmycells/process/>).\
+2.  (Optional) Log in to MapMyCells.\
+3.  Upload 'droplet_library.h5ad' to the site via the file system or drag and drop (Step 1).\
+4.  Choose "10x Whole Mouse Brain (CCN20230722)" as the "Reference Taxonomy" (Step 2).\
+5.  Choose the desired "Mapping Algorithm" (in this case "Hierarchical Mapping").\
+6.  Click "Start" and wait \~5 minutes. (Optional) You may have a panel on the left that says "Map Results" where you can also wait for your run to finish.\
+7.  When the mapping is complete, you will have an option to download the "tar" file with mapping results. If your browser is preventing popups, search for small folder icon to the right URL address bar to enable downloads.\
+8.  Unzip this file, which will contain three files: "validation_log.txt", "[NUMBER].json", and "[NUMBER].csv". [NUMBER].csv contains the mapping results, which you need. The validation log will give you information about the the run itself and the json file will give you extra information about the mapping (you can ignore both of these files if the run completes successfully).\
+9.  Copy [NUMBER].csv to your current working directory and rename it "droplet_library_mapping.csv").\
+10. You can now go back to R and continue the script below.
+
+#### Read mapping results into R
+
+Let's now look at the output results from the hierarchical clustering algorithm. We can read this into R using read.csv, but note that the first four lines contain metadata that need to be skipped.
+
+```{r}
+hierarchical_mapping <- read.csv("Base_atlas_raw_counts_HierarchicalMapping.csv",comment.char="#")
+head(data.frame(hierarchical_mapping))
+```
+
+MapMyCells maps input cells to the taxonomy at four increasing levels of resolution from coarsest class, to intermediate subclass, and supertype, and finest cluster. In the mouse whole brain taxonomy there are 32 classes, 306 subclasses, 1,045 supertypes and 5,200 clusters.
+
+The file consists of the following columns:
+
+-   *cell_id* = the cell identifiers for your cells included in the initial h5ad files\
+-   *class_label* = the unique identifier for the best mapping class\
+-   *class_name* = the name of the best mapping class\
+-   *class_bootstrapping_probability* = fraction of bootstrapping runs that the cell mapped to the above class (higher numbers are better, with 1 being the best)\
+    and similar fields for subclass, supertype, and cluster. For finest level *cluster* there is an additional field\
+-   *cluster_alias* = another unique identifier for the cluster
+
+(the same for subclasses, supertypes and clusters)
+
+#### Review top classes
+
+As this library was selected from a dissection of primary motor cortex (MOp), we expect the majority of cells to map to cell types found in MOp. Let's check!
+
+```{r}
+# View the top classes and subclasses
+data.frame(Cell_counts=head(sort(table(hierarchical_mapping$class_name),decreasing=T),10))
+data.frame(Cell_counts=head(sort(table(hierarchical_mapping$subclass_name),decreasing=T),15))
+data.frame(Cell_counts=head(sort(table(hierarchical_mapping$cluster_name),decreasing=T),100))
+
+# What fraction of all cells does this represent?
+100*sum(t(t(head(sort(table(hierarchical_mapping$class_name),decreasing=T),5))))/length(hierarchical_mapping$class_name)
+100*sum(t(t(head(sort(table(hierarchical_mapping$subclass_name),decreasing=T),11))))/length(hierarchical_mapping$subclass_name)
+
+```
+
+
+#### Visualize mapping results
+
+Now let's visualize the mapping results. We will do this by saving the data in a Seurat object with (modified) mapping results as metadata.
+
+```{r}
+# Assign rare classes and subclasses as "other"
+hierarchical_mapping$class_new <- hierarchical_mapping$class_name
+hierarchical_mapping$class_new[!is.element(hierarchical_mapping$class_name,names(head(-sort(-table(hierarchical_mapping$class_name)),5)))] = "other"
+hierarchical_mapping$subclass_new <- hierarchical_mapping$subclass_name
+hierarchical_mapping$subclass_new[!is.element(hierarchical_mapping$subclass_name,names(head(-sort(-table(hierarchical_mapping$subclass_name)),11)))] = "other"
+
+# Put row.names as data colnames and the order to match the data
+hierarchical_mapping$cell_id <- gsub("\\.", "-", hierarchical_mapping$cell_id)
+rownames(hierarchical_mapping) <- hierarchical_mapping$cell_id
+hierarchical_mapping <- hierarchical_mapping[colnames(base_atlas),]
+
+
+# Add metadata to the Seurat object
+base_atlas<-AddMetaData(base_atlas,hierarchical_mapping)
+
+
+```
+
+Now let's make the plot for classes
+
+```{r}
+base_atlas$class_new <- factor(base_atlas$class_new,levels=names(table(base_atlas$class_new)[order(table(base_atlas$class_new),decreasing = TRUE)]))
+pdf('Base_atlas_mapmycell_class.pdf', width = 9)
+dittoDimPlot(base_atlas, "class_new", reduction.use = "umap", do.label=F)
+dev.off()
+pdf('Base_atlas_mapmycell_class_bootstrapping_probability.pdf')
+dittoDimPlot(base_atlas, "class_bootstrapping_probability", reduction.use = "umap", do.label=F, min.color = "lightgrey", max.color = "blue") 
+dev.off()
+table(base_atlas$class_new)
+
+
+```
+
+Here the data has not been clustered but rather the class assignments are assigned to the data in the UMAP. 
+
+Now let's make the plot where we color-code the same UMAP by subclass.
+
+```{r}
+base_atlas$subclass_new <- factor(base_atlas$subclass_new,levels=names(table(base_atlas$subclass_new)[order(table(base_atlas$subclass_new),decreasing = TRUE)]))
+pdf('Base_atlas_mapmycell_subclass.pdf', width = 9)
+dittoDimPlot(base_atlas, "subclass_new", reduction.use = "umap", do.label=F)
+dev.off()
+pdf('Base_atlas_mapmycell_subclass_bootstrapping_probability.pdf')
+dittoDimPlot(base_atlas, "subclass_bootstrapping_probability", reduction.use = "umap", do.label=F, min.color = "lightgrey", max.color = "blue") 
+dev.off()
+table(base_atlas$subclass_new)
+
+
+```
