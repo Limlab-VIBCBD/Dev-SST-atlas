@@ -20,7 +20,7 @@ source("Seurat_Utils.R")
 computeIntegrationAndClusters <- function(obj, batch, nPCs=NULL, min.res=0.1, max.res=1){
   DefaultAssay(obj) <- 'RNA'
   remove_samples<-names(table(obj@meta.data[,batch]))[table(obj@meta.data[,batch]) < 20]
-  if(length(remove_samples > 0)){
+  if(length(remove_samples)> 0){
     eval(parse(text=paste0("obj<-subset(obj, subset=",batch," %!in% remove_samples)")))
   }
   integrated_all_list <- SplitObject(obj, split.by = batch)
@@ -198,6 +198,7 @@ mergeClosestCluster <-function(obj, clusters, PassClusters, nPCs){
 }
 
 renameClusters <- function(clusters){
+  clusters <- paste("cl",clusters, sep="_")
   name <- 0
   for (i in names(table(clusters)[order(table(clusters), decreasing = TRUE)])){
     clusters[which(clusters == i)] <- as.character(name)

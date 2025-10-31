@@ -12,26 +12,26 @@ library(tidyr)
 library(purrr)
 library(parallel)
 library(doMC)
-source("Seurat_Utils.R")
 source("Clustering_pipeline.r")
 
+# set the working directory to the location where you want the output files to be saved.
+setwd('output_dir/')
 cr.dir<-getwd()
-obj <- readRDS('Atlas_v2.RDS') # load seurat obj to compute clustering 
+# load filtered Seurat object 
+obj <- readRDS('Integrated_atlas_v2_FILTERED_NonMartinotti.RDS')
 ### create environment variable to save final clustering (after all iterations)
 final.clusters<-rep("c", dim(obj)[2])
 names(final.clusters) <- rownames(obj@meta.data)
-final.clusters[names(clusters)] <- paste(final.clusters[names(clusters)],clusters,sep=".")
 ### launch pipeline
-lapply(names(table(clusters)[table(clusters) >= 300]),function(cl){
-  Iteration <<- Iteration + 1
-  print(paste0("Iteration ",Iteration,"- Cluster ",cl))
-  obj <- subset(obj, cells=names(clusters[clusters %in% cl]))
-  setwd(cr.dir)
-  dir.create(paste0("Cluster_",cl))
-  setwd(paste0("Cluster_",cl))
-  cr.dir<-paste0(cr.dir,"/Cluster_",cl)
-  callIteration(obj, batch='sample', nPC=NULL, min.res=0.1, max.res=0.5, perc.sub=0.8, n_subsampling=20, jaccard_cutoff=0.75, percent_cutoff=0.74, minSize=149, DEscore.cutoff=60,cr.dir=cr.dir)
-  gc()
-})
-#saveRDS(final.clusters,paste0(cr.dir,"/finalClusters.RDS")) #save resulting clusterings after all iterations end
-
+# 'sample' — name of the column in the metadata of 'obj' containing sample IDs  
+# nPC — number of PCs to use; if set to NULL, the optimal number is automatically estimated  
+# min.res and max.res — range of resolutions to use when computing clusters  
+# perc.sub — percentage of cells to subsample from the whole dataset for cluster stability evaluation  
+# n_subsampling — number of subsampling iterations to perform for cluster stability evaluation  
+# jaccard_cutoff — Jaccard index threshold used to define cluster stability  
+# percent_cutoff — percentage of subsamplings that must meet the jaccard_cutoff to classify a cluster as stable  
+# minSize — minimum cluster size  
+# DEscore.cutoff — minimum DEscore value  
+callIteration(obj, 'sample', nPC=NULL, min.res=0.1, max.res=0.5, perc.sub=0.8, n_subsampling=20, jaccard_cutoff=0.75, percent_cutoff=0.749, minSize=149, DEscore.cutoff=60,cr.dir=cr.dir)
+# save final clusters produced by the pipeline
+saveRDS(final.clusters,paste0(cr.dir,"/finalClusters.RDS"))
