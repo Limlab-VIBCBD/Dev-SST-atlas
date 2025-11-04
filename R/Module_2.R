@@ -108,7 +108,7 @@ ElbowPlot(Seurat_object_subset, ndims = 60)
 # Adjusting nPC based on ndims on the ElbowPlot 
 data.use.integrated<- PrepDR(object = integrated_data, genes.use = VariableFeatures(object = integrated_data), use.imputed = F, assay.type = "integrated")
 path_data <- getwd()
-# Adjust `from.nPC` and `to.nPC` after inspecting the ndims of the ElbowPlot
+# Adjust `from.nPC` and `to.nPC` after inspecting the ElbowPlot
 nPCs.data.use <- PCA_estimate_nPC(data.use.integrated, whereto=paste0(path_data,"/optimal_nPCs_integrated.RDS"), by.nPC=1, from.nPC = 30,to.nPC = 40)
 # save the most informative principal components
 pca_integrated<-Embeddings(integrated_data, reduction = "pca")[,1:nPCs.data.use]
