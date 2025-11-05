@@ -1,3 +1,5 @@
+## THIS IS AN ALTERNATIVE TO NEXTFLOW PIPELINE
+
 ########################
 # Load required packages
 ########################
@@ -18,7 +20,7 @@ library(doMC)
 #########################################
 # Load functions for iterative clustering
 #########################################
-source("Clustering_pipeline_functions.r")
+source("Iterative_Clustering_pipeline_functions.R")
 
 # set the working directory to the location where you want the output files to be saved.
 setwd('output_dir/')
