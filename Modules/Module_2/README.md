@@ -10,5 +10,5 @@ The integrability of each dataset with the reference atlas (Atlas-v0) was evalua
 
 Only datasets meeting all three criteria (anchor points, neighborhood composition, and kBET rejection rate) were included in the construction of the Dev-SST-v2 atlas.
 
-You can find the code to reproduce the integrability tests [here](R_code/Module_2.R). \
-The code used to compute the anchor point threshold is available [here](R_code/Module_2_number_of_anchors_threshold_definition.R).
+You can find the code to reproduce the integrability tests [here](../../R_code/Module_2.R). \
+The code used to compute the anchor point threshold is available [here](../../R_code/Module_2_number_of_anchors_threshold_definition.R).
