@@ -1,6 +1,6 @@
 # Nextflow pipeline for iterative clustering 
 
-This nextflow pipeline run the iterative clustering algorithm used to copute clusters for the DEV-Sst-Atlas. 
+This nextflow pipeline run the iterative clustering algorithm used to compute clusters for the DEV-Sst-Atlas. 
 
 ## Alghorithm
 Iterative clustering is performed through the following steps:

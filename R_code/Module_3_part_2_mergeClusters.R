@@ -1,14 +1,16 @@
 # Run this after calculating clusters with the iterative clustering pipeline (nextflow)
-# Check whether any pairs of clusters should be merged based on marker gene expression.
+# Check whether thare are transcriptionally close cluster pairs that should be merged.
 library(Seurat)
 library(ggplot2)
 library(dplyr)
+library(tidyr)
 library(ComplexHeatmap)
+'%!in%' <- function(x,y)!('%in%'(x,y))
 # load output from nextflow clustering pipeline
 obj<-readRDS('object_with_final_clusters.RDS')
 DefaultAssay(obj) <-'RNA'
 Idents(obj) <- 'final_clusters'
-# Compute markers
+# Compute markers for all clusters
 markers <- FindAllMarkers(obj,logfc.threshold = log2(1.5), min.pct = 0.2,only.pos = TRUE, test.use = 'MAST', latent.vars = 'batch')
 ribo_genes <- grep(pattern = "^Rp[sl]", x = rownames(obj@assays$RNA@counts), value = TRUE)
 markers<-markers[which(markers$gene %!in% ribo_genes),]
@@ -75,7 +77,7 @@ hp<- Heatmap(exp_mat,
              border = "black",
              cluster_rows = FALSE)
 
-# Identify couples with cophenetic distance below the 5th percentile of the distribution of cophenetic distances across all cluster pairs
+# Identify pairs of clusters with a cophenetic distance below the 5th percentile of the cophenetic distance distribution across all cluster pairs in the dendrogram
 hp = draw(hp)
 dend_dist<-cophenetic(column_dend(hp))
 cutoff<-quantile(as.vector(dend_dist), 0.05)
@@ -125,5 +127,5 @@ clusters_to_merge<-lapply(names(clusters_to_test), function(x){
   return(to_merge)
 })
 names(clusters_to_merge) <- names(clusters_to_test)
-# clusters_to_merge contains information on clusters that should be merged
+# clusters_to_merge contains information on cluster pairs that should be merged into one cluster
 

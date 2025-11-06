@@ -10,7 +10,6 @@ library(gtools)
 library(dplyr)
 library(R.utils)
 
-
 ####################
 # MapMyCell to adult
 ####################
@@ -155,12 +154,12 @@ Convert("Yao_2023_053_056_subclasses.h5Seurat", dest = "h5ad") # create h5ad fil
 # celltypemapper install is needed (https://github.com/AllenInstitute/cell_type_mapper)
 # run celltypemapper from command line
 # Create reference 
-#python -m cell_type_mapper.cli.precompute_stats_scrattch --h5ad_path Yao_2023.h5ad --hierarchy '["class_name","subclass_name","supertype_name","cluster_name"]' --output_path Reference_markers_sub/precomputed_stats_Yao.h5
-#python -m cell_type_mapper.cli.reference_markers --precomputed_path_list '["Reference_markers_sub/precomputed_stats_Yao.h5"]'  --output_dir Reference_markers_sub/ --tmp tmp_folder/ 
-#python -m cell_type_mapper.cli.query_markers --reference_marker_path_list '["Reference_markers_sub/reference_markers.h5"]' --output_path Reference_markers_sub/reference_markers.json
+##python -m cell_type_mapper.cli.precompute_stats_scrattch --h5ad_path Yao_2023.h5ad --hierarchy '["class_name","subclass_name","supertype_name","cluster_name"]' --output_path Reference_markers_sub/precomputed_stats_Yao.h5
+##python -m cell_type_mapper.cli.reference_markers --precomputed_path_list '["Reference_markers_sub/precomputed_stats_Yao.h5"]'  --output_dir Reference_markers_sub/ --tmp tmp_folder/ 
+##python -m cell_type_mapper.cli.query_markers --reference_marker_path_list '["Reference_markers_sub/reference_markers.h5"]' --output_path Reference_markers_sub/reference_markers.json
 
 # Map atlas to reference 
-#python -m cell_type_mapper.cli.from_specified_markers --query_path atlas_v2_raw_counts.h5ad --extended_result_path MapMyCell/Reference/Reference_markers_sub/results.json --precomputed_stats.path MapMyCell/Reference/Reference_markers_sub/precomputed_stats_Yao.h5 --query_markers.serialized_lookup MapMyCell/Reference/Reference_markers_sub/reference_markers.json --type_assignment.normalization raw --csv_result_path mapmycell.csv
+##python -m cell_type_mapper.cli.from_specified_markers --query_path atlas_v2_raw_counts.h5ad --extended_result_path MapMyCell/Reference/Reference_markers_sub/results.json --precomputed_stats.path MapMyCell/Reference/Reference_markers_sub/precomputed_stats_Yao.h5 --query_markers.serialized_lookup MapMyCell/Reference/Reference_markers_sub/reference_markers.json --type_assignment.normalization raw --csv_result_path mapmycell.csv
 
 
 #########################
@@ -179,9 +178,9 @@ obj<-AddMetaData(obj, metadata)
 SaveH5Seurat(obj, filename = "LRP_sub_MapMyCell.h5Seurat", overwrite = TRUE)
 Convert("LRP_sub_MapMyCell.h5Seurat", dest = "h5ad")
 # celltypemapper - command line: create reference 
-#python -m cell_type_mapper.cli.precompute_stats_scrattch --h5ad_path LRP_sub_MapMyCell.h5ad --hierarchy '["clusters"]' --output_path Reference_markers_sub/precomputed_stats.h5
-#python -m cell_type_mapper.cli.reference_markers --precomputed_path_list '["Reference_markers_sub/precomputed_stats.h5"]'  --output_dir Reference_markers_sub/ --tmp tmp_folder/ 
-#python -m cell_type_mapper.cli.query_markers --reference_marker_path_list '["Reference_markers_sub/reference_markers.h5"]' --output_path Reference_markers_sub/reference_markers.json
+##python -m cell_type_mapper.cli.precompute_stats_scrattch --h5ad_path LRP_sub_MapMyCell.h5ad --hierarchy '["clusters"]' --output_path Reference_markers_sub/precomputed_stats.h5
+##python -m cell_type_mapper.cli.reference_markers --precomputed_path_list '["Reference_markers_sub/precomputed_stats.h5"]'  --output_dir Reference_markers_sub/ --tmp tmp_folder/ 
+##python -m cell_type_mapper.cli.query_markers --reference_marker_path_list '["Reference_markers_sub/reference_markers.h5"]' --output_path Reference_markers_sub/reference_markers.json
 
 # MAP TO LRP REFERENCE 
 # Example on SST+ NPY+ human dataset
@@ -197,4 +196,4 @@ obj<-CreateSeuratObject(dataOut)
 SaveH5Seurat(obj, filename = "NPY_SST_raw_counts_mouseOrt.h5Seurat", overwrite = TRUE)
 Convert("NPY_SST_raw_counts_mouseOrt.h5Seurat", dest = "h5ad")
 # celltypemapper - command line: map to reference 
-#python -m cell_type_mapper.cli.from_specified_markers --query_path NPY_SST_raw_counts_mouseOrt.h5ad --extended_result_path results.json --precomputed_stats.path precomputed_stats.h5 --query_markers.serialized_lookup reference_markers.json --type_assignment.normalization log2CPM --csv_result_path results.csv
+##python -m cell_type_mapper.cli.from_specified_markers --query_path NPY_SST_raw_counts_mouseOrt.h5ad --extended_result_path results.json --precomputed_stats.path precomputed_stats.h5 --query_markers.serialized_lookup reference_markers.json --type_assignment.normalization log2CPM --csv_result_path results.csv

@@ -29,7 +29,7 @@ library(kBET)
 library(EnvStats)
 '%!in%' <- function(x,y)!('%in%'(x,y))
 # Source the external script 'Seurat_Utils' for further analysis (10-fold Singular Value Decomposition (SVD) cross validation to predict number of PCs)
-source("Seurat_Utils.R") 
+source("R_code/Seurat_Utils.R") 
 
 ###########
 # Load data
@@ -37,7 +37,7 @@ source("Seurat_Utils.R")
 
 ## Upload Base atlas and dataset to evaluate
 # Set the working directory and open the dataset of interest
-test_dataset_filtered_sst <- readRDS("P1_DS24_Clean.rds")
+test_dataset_filtered_sst <- readRDS("Dataset_P1_Dibella_Sst_filtered.rds")
 # Add a column to the metadata and specify the name of testing sample 
 test_dataset_filtered_sst$sample <- "test_dataset"
 # Set the working directory and open the reference Dataset

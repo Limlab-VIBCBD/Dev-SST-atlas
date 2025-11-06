@@ -21,7 +21,7 @@ library(BiocNeighbors)
 ######################
 # Compute subsamplings
 ######################
-# Subsample cells without replacement at percentages ranging from 5% to 95% in 5% increments.
+# Randomly subsample cells without replacement at proportions ranging from 5% to 95% in 5% increments.
 # For each percentage, 10 independent subsamples are generated.
 cell_subsampling <-list()
 for (perc.sub in seq(0.05, 0.95, 0.05)){

@@ -27,7 +27,8 @@ library(ComplexHeatmap)
 #####################
 # Prepare files for Antler
 antler_path<-getwd()
-atlas_v2_LRP<-subset(atlas_v2, subset=major_label_transferAnchors_BaseAtlas == "LRP")
+# load LRP subset with clusters
+# Prepare dataset
 atlas_v2_LRP<-subset(atlas_v2_LRP, subset=final_clusters_renamed %in% c("LRP2.1","LRP1.0"))  
 atlas_v2_LRP<-subset(atlas_v2_LRP, subset=time_point %in% c("E16","P1","P5"))    
 atlas_v2_LRP$time <- parse_number(atlas_v2_LRP$time_point)
@@ -73,7 +74,6 @@ for(mod in 1:length(modList)){
   g<-modList[[mod]]
   #if there are enough genes, try gprofiler
   if(length(g)>=10){
-    #warning("Attempting to generate functional enrichment using gprofileR. Sometimes this fails due to bad connection / problems with the gprofiler online service, and may simply need to be rerun.")
     res<-gost(g,organism='mmusculus',as_short_link=F)$result
     res <- data.frame(lapply(res, as.character), stringsAsFactors=FALSE)
     GOenrichment[[paste0('Mod ',mod)]] <- res
@@ -83,7 +83,7 @@ for(mod in 1:length(modList)){
 }
 write.csv(linkList,file=paste0(antler_path,'/gprofiler_links.csv'))
 saveRDS(GOenrichment, paste0(antler_path,'/Antler_gene_modules_GOenrichment.RDS'))
-# Select gene modules associated with terms including “neuron differentiation”, “axon development”, and “synapse assembly”.
+# Select gene modules associated with terms including “neuron differentiation”, “axon guidance”, "axon growth", and “synapse assembly”.
 modules_sel<-c()
 for(mod in 1:length(modList)){
   if(sum(GOenrichment[[mod]]$term_name %in% c("neuron differentiation","synapse formation","axon guidance","axon growth")) > 0) modules_sel<-c(modules_sel,names(GOenrichment)[mod])
@@ -139,6 +139,7 @@ names(pseudotime)<-rownames(dm@eigenvectors)
 # save pseudotime and diffusion components into Seurat object
 atlas_v2_LRP$pseudotime <- pseudotime[colnames(atlas_v2_LRP)]
 atlas_v2_LRP[["DC"]] <- CreateDimReducObject(embeddings = eigenvectors(dm)[colnames(obj),1:2], key = "DC_", assay = DefaultAssay(atlas_v2_LRP))
+
 ##########################
 # Pseudotime related genes
 ##########################

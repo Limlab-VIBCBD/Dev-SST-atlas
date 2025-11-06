@@ -224,10 +224,11 @@ library(future)
 library(doMC)
 library(dplyr)
 library(magrittr)
+library(gplots)
+library(grDevices)
 '%!in%' <- function(x,y)!('%in%'(x,y))
 # set color palette 
 breaks <-  seq(0, 0.5, length.out=101)
-#cols <- colorRampPalette(colors = c('black','#EE9A3A'))(1000)
 cols <- colorRampPalette(colors = c('black','#3CBC75FF','#F0B800'))(100)
 
 

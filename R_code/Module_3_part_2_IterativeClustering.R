@@ -5,18 +5,14 @@
 ########################
 library(stringr)
 library(Seurat)
-library(dittoSeq)
-library(ggplot2)
 library(gtools)
 library(dplyr)
-library(dittoSeq)
 library(R.utils)
-library(colorspace)
 library(scclusteval)
 library(tidyr)
 library(purrr)
 library(parallel)
-library(doMC)
+
 #########################################
 # Load functions for iterative clustering
 #########################################
@@ -31,7 +27,7 @@ obj <- readRDS('Integrated_atlas_v2_NonMartinotti.RDS')
 final.clusters<-rep("c", dim(obj)[2])
 names(final.clusters) <- rownames(obj@meta.data)
 ### launch pipeline
-# 'sample' — name of the column in the metadata of 'obj' containing sample IDs  
+# 'batch' — name of the column in the metadata of 'obj' containing sample IDs  
 # nPC — number of PCs to use; if set to NULL, the optimal number is automatically estimated  
 # min.res and max.res — range of resolutions to use when computing clusters  
 # perc.sub — percentage of cells to subsample from the whole dataset for cluster stability evaluation  

@@ -35,8 +35,8 @@ names(colors_ditto)<-as.character(c(0:(length(colors_ditto)-1)))
 ###########
 # Load data
 ###########
-# Load previously Sst+ filtered cells from saved Seurat objects passing integrability tests
-base_atlas <- readRDS("integrated_all_to_send.rds")
+# Load previously Sst+ filtered cells from samples passing integrability tests
+base_atlas <- readRDS("integrated_all_Sst_filtered.rds")
 base_atlas$batch <- paste0("BaseAtlas_",base_atlas$orig.ident)
 E16_Lim4 <- readRDS("lim4_E16_Sst_filtered.rds")
 E16_Lim4$batch <- "E16_Lim4"
@@ -93,7 +93,7 @@ base_atlas <- NormalizeData(base_atlas)
 base_atlas <- FindVariableFeatures(base_atlas)
 base_atlas <- ScaleData(base_atlas, vars.to.regress = c("nFeature_RNA",'percent.mt','ccDiff'))
 base_atlas <- RunPCA(base_atlas,npcs = 50)
-# Initialize empty vector to store minor labels
+# Initialize empty vector to store cluster annotation
 minor_label <- c()
 # Perform label transfer
 for (sample in c("E16_Lim4","P1_Lim3","P1_Lim5","P5_WT1_Lim1","P5_WT23_Lim2","E18_Lippi","P1_EMI014_Lim","Wu_p2","E16_EMI018")) {
@@ -105,9 +105,9 @@ for (sample in c("E16_Lim4","P1_Lim3","P1_Lim5","P5_WT1_Lim1","P5_WT23_Lim2","E1
   transfer.anchors <- FindTransferAnchors(reference = base_atlas, query = integrated_all_list[[sample]], dims = 1:40, reference.reduction = "pca", features=intersect(rownames(base_atlas), rownames(integrated_all_list[[sample]])))
   # Transfer labels based on the reference
   predictions <- TransferData(anchorset = transfer.anchors, refdata = base_atlas$cluster_label_trained_with_all, dims = 1:40)
-  # Add the predicted minor labels to the sample object
+  # Add the predicted cluster annotation to the sample object
   integrated_all_list[[sample]]$minor_label_transferAnchors_BaseAtlas <- predictions[colnames(integrated_all_list[[sample]]),'predicted.id']
-  # Append the predicted labels to the overall list of minor labels
+  # Append the predicted cluster annotation to the overall list
   minor_pred <- predictions$predicted.id
   names(minor_pred) <- rownames(predictions)
   minor_label <- c(minor_label,minor_pred)
@@ -115,7 +115,7 @@ for (sample in c("E16_Lim4","P1_Lim3","P1_Lim5","P5_WT1_Lim1","P5_WT23_Lim2","E1
 for (sample in c("BaseAtlas_E16","BaseAtlas_lim_P5_fixed_sorted","BaseAtlas_P1","BaseAtlas_P5") ) {
   integrated_all_list[[sample]]$minor_label_transferAnchors_BaseAtlas <- integrated_all_list[[sample]]$cluster_label_trained_with_all
 }
-# Doublets Prediction Using Minor Labels
+# Doublets Prediction Using predicted clusters
 # Initialize an empty vector to store doublet annotations
 doublets_sceDblF <- c()
 # Loop through all datasets in the integrated list and predict doublets
