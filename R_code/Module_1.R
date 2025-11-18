@@ -19,8 +19,8 @@ library(dplyr)
 library(dittoSeq)
 library(R.utils)
 library(DoubletFinder)
-# Source the external script 'Seurat_Utils' for further analysis (10-fold Singular Value Decomposition (SVD) cross validation to predict number of PCs)
-source("R_code/Seurat_Utils.R") 
+# Source the script 'Seurat_Utils' for further analysis (10-fold Singular Value Decomposition (SVD) cross validation to predict number of PCs)
+source("Seurat_Utils.R") 
 
 ############
 # Load data

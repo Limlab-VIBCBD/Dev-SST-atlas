@@ -7,7 +7,7 @@ library(scclusteval)
 library(tidyr)
 library(purrr)
 library(parallel)
-source("Seurat_Utils.R")
+source("R_code/Seurat_Utils.R")
 '%!in%' <- function(x,y)!('%in%'(x,y))
 
 ### Compute integration of samples (batch) using cca and compute clusters

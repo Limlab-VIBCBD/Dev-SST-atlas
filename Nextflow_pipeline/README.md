@@ -18,8 +18,13 @@ Iterative clustering is performed through the following steps:
 + Replicate iteration. If only one cluster remains after completing all previous steps, the iteration stops. Otherwise, repeat the full procedure for all clusters until a single cluster is obtained.
 
 ## Requirements
-To run the pipeline, you need to have Nextflow and [Conda](https://docs.conda.io/projects/conda/en/stable/user-guide/install/index.html) or Miniconda package manager installed on your system. \
-The Nextflow pipeline will automatically create and activate a Conda environment with all required software packages and their dependecies. By default, Nextflow instructs Conda to save the required environments in the pipeline work/ directory.
+To run the pipeline, you need to have [Nextflow](https://www.nextflow.io/docs/latest/install.html), [Docker](https://www.docker.com/get-started/) and [Micromamba](https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html) installed on your system. \
+Before running the pipeline, you must build the Docker image that contains all required software. From within the pipeline directory, run:
+```bash
+sudo docker build -t genevia/iterative_clustering_pipeline_r:v1.0 docker/
+sudo docker push genevia/iterative_clustering_pipeline_r:v1.0
+```
+On an HPC cluster, you can run the pipeline using [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/quick_start.html), which is fully compatible with Docker images. Singularity will automatically convert and use the Docker image when executing the Nextflow pipeline. 
 
 ## Input files
 The pipeline requires as input a saved R Seurat object containing in the meta.data a column named ``batch`` with information about sample_id.\
@@ -34,11 +39,11 @@ You can configure the input file path, adjust algorithm parameters, specify the 
 We recommend increasing the memory allocation when working with datasets containing more than 50,000 cells.
 ## Run pipeline
 To execute the pipeline, you can clone the repository and run the following command from within the pipeline directory: 
-```nextflow
+```bash
 nextflow run clustering_pipeline.nf
 ```
 If the pipeline stops for any reason, you can resume the run from the last successful process by adding the -resume option:
-```nextflow
+```bash
 nextflow run clustering_pipeline.nf -resume
 ```
 ## Outputs
@@ -48,5 +53,5 @@ You can plot the UMAP with clusters using the following code:
 ```R
 library(Seurat)
 obj<-readRDS('object_with_final_clusters.RDS')
-DimPlot(obj, group.by="final_clusters')
+DimPlot(obj, group.by='final_clusters')
 ```

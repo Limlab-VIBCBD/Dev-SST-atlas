@@ -9,6 +9,7 @@ library(dittoSeq)
 library(gtools)
 library(dplyr)
 library(R.utils)
+library(anndata)
 
 ####################
 # MapMyCell to adult
