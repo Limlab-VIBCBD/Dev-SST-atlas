@@ -25,7 +25,6 @@ process integration {
       remove_samples<-names(table(obj@meta.data[,"batch"]))[table(obj@meta.data[,"batch"]) < 20]
       if(length(remove_samples) > 0){
         remove_cells <- colnames(subset(obj, subset=batch %in% remove_samples))
-        write.table(remove_cells, "${tmppath}/remove_cells.txt",sep="\t", quote=FALSE, col.names=FALSE, row.names=FALSE, append=TRUE)
         obj<-subset(obj, subset=batch %!in% remove_samples)
       }
       if(length(table(obj\$batch)) > 1){
