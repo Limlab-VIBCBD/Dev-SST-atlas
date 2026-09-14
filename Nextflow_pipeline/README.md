@@ -19,11 +19,7 @@ Iterative clustering is performed through the following steps:
 
 ## Requirements
 To run the pipeline, you need to have [Nextflow](https://www.nextflow.io/docs/latest/install.html), [Docker](https://www.docker.com/get-started/) and [Micromamba](https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html) installed on your system. \
-Before running the pipeline, you must build the Docker image that contains all required software. From within the pipeline directory, run:
-```bash
-sudo docker build -t genevia/iterative_clustering_pipeline_r:v1.0 docker/
-sudo docker push genevia/iterative_clustering_pipeline_r:v1.0
-```
+
 On an HPC cluster, you can run the pipeline using [Singularity](https://docs.sylabs.io/guides/3.0/user-guide/quick_start.html), which is fully compatible with Docker images. Singularity will automatically convert and use the Docker image when executing the Nextflow pipeline. 
 
 ## Input files
